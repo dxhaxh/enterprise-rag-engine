@@ -6,7 +6,7 @@ from src.retrieval.vector_store import QdrantStore  # New import for the databas
 async def main():
     print("1. Initializing pipeline and Vector DB connection...")
     pipeline = IngestionPipeline()
-    vector_store = QdrantStore()  # Connect to the database running in Docker
+    vector_store = QdrantStore()  # Connect to the local vector database
 
     # fake document that is long enough to trigger the chunking logic
     fake_text = "Modern backend architectures require highly scalable distributed systems to process latency-sensitive requests. " * 30
@@ -16,7 +16,7 @@ async def main():
         id="doc-001",
         content=fake_text,
         metadata=DocumentMetadata(
-            tenant_id="tenant-Squarepoint",
+            tenant_id="tenant-Alpha",  # Updated to neutral placeholder
             allowed_roles=["admin", "quant"],
             source="internal_wiki"
         )
@@ -38,7 +38,7 @@ async def main():
 
     print("\n3. Saving chunks permanently to Qdrant...")
     
-    # This takes our chunks (text + metadata + math vectors) and saves them into the Docker database
+    # This takes our chunks (text + metadata + math vectors) and saves them into the vector database
     vector_store.upsert_chunks(chunks)
     
     print("   Success! Data is now safely stored in the vector database.")
