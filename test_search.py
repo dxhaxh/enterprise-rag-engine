@@ -16,7 +16,7 @@ def test_search_engine():
     )
     print(f"Found {len(results)} authorized chunks:")
     for r in results:
-        print(f"  - Score: {r['score']:.4f} | Snippet: {r['content'][:45]}...")
+        print(f"  - Re-rank Score: {r['rerank_score']:.4f} | Vector Score: {r['vector_score']:.4f} | Snippet: {r['content'][:40]}...")
 
     # Test Scenario 2: Unauthorized Role (tenant-Alpha, role 'intern' - not in allowed roles)
     print(f"\n--- Scenario 2: Unauthorized Role (Alpha / intern) ---")

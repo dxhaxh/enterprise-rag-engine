@@ -4,26 +4,29 @@ from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 
 from src.config import settings
+from src.retrieval.reranker import ReRanker
 
 class EnterpriseSearchEngine:
     """
-    Executes secure vector searches against Qdrant with integrated RBAC and multi-tenancy.
+    Executes secure vector searches against Qdrant with integrated RBAC, 
+    multi-tenancy, and high-precision Cross-Encoder re-ranking.
     """
     def __init__(self):
         # Connect to our local file-based Qdrant database folder
         self.client = QdrantClient(path="local_qdrant_storage")
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         
-        # Load the local embedding model to convert search queries into math vectors
+        # Load the local embedding model and the re-ranker
         self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
+        self.reranker = ReRanker()
+
+    search_top_k: int = 10  # Retrieve more candidates initially for the re-ranker to filter
 
     def search(self, query_text: str, tenant_id: str, user_role: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """
-        Performs a semantic vector search restricted by tenant and user role.
-        
-        Security Feature: The metadata filters (tenant_id and allowed_roles) are applied 
-        DIRECTLY inside the vector search. The database ignores any chunks that 
-        do not match the user's security clearance.
+        Performs a two-stage retrieval pipeline:
+        1. Secure Vector Search (Bi-Encoder) to fetch a broader candidate pool.
+        2. Cross-Encoder Re-ranking to guarantee maximum semantic precision.
         """
         # 1. Convert search query into a 384-dimensional normalized vector
         query_vector = self.model.encode(query_text, convert_to_numpy=True, normalize_embeddings=True).tolist()
@@ -36,41 +39,28 @@ class EnterpriseSearchEngine:
             ]
         )
 
-        # 3. Execute the search using query_points
+        # 3. Execute vector search, pulling a larger pool (e.g., 10) for re-ranking
         search_result = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,
             query_filter=security_filter, 
-            limit=top_k
+            limit=10 
         )
         
         search_results = search_result.points
 
-        # 4. Format the results safely, handling any object structure or tuple variation
+        # 4. Format initial results
         formatted_results = []
         for result in search_results:
-            # Handle case where result might be unpacked differently depending on client version
-            payload = {}
-            score = 0.0
-            
-            if hasattr(result, "payload"):
-                payload = result.payload or {}
-                score = getattr(result, "score", 0.0)
-            elif isinstance(result, tuple):
-                # If it's a tuple, inspect elements for payload/score
-                for item in result:
-                    if isinstance(item, dict) and "chunk_id" in item:
-                        payload = item
-                    elif hasattr(item, "payload"):
-                        payload = item.payload or {}
-                    elif isinstance(item, (int, float)):
-                        score = float(item)
-
+            payload = result.payload or {}
             formatted_results.append({
                 "chunk_id": payload.get("chunk_id"),
                 "content": payload.get("content"),
-                "score": score, 
+                "vector_score": result.score, 
                 "source": payload.get("source")
             })
 
-        return formatted_results
+        # 5. Apply Phase 4 Cross-Encoder Re-ranking to narrow down to top_k with high precision
+        final_results = self.reranker.rerank(query=query_text, results=formatted_results, top_k=top_k)
+
+        return final_results
