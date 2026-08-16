@@ -3,3 +3,4 @@ venv/
 __pycache__/
 qdrant_data/
 redis_data/
+local_qdrant_storage/

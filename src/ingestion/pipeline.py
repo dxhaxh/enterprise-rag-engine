@@ -20,7 +20,7 @@ class IngestionPipeline:
         Returns an ordered list of 384-dimensional float arrays.
         """
         # We tell the model to convert the text into numpy math arrays
-        embeddings = self.model.encode(texts, convert_to_numpy=True)
+        embeddings = self.model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
         return embeddings.tolist()
 
     async def process_documents(self, documents: List[RawDocument]) -> List[DocumentChunk]:
