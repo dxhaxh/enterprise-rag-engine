@@ -17,3 +17,9 @@ tiktoken>=0.6.0
 
 # LLM Providers
 openai>=1.14.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Testing & Evaluation
+pytest>=8.0.0
