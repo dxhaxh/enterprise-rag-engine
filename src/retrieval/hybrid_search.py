@@ -11,16 +11,20 @@ class EnterpriseSearchEngine:
     Executes secure vector searches against Qdrant with integrated RBAC, 
     multi-tenancy, and high-precision Cross-Encoder re-ranking.
     """
-    def __init__(self):
-        # Connect to our local file-based Qdrant database folder
-        self.client = QdrantClient(path="local_qdrant_storage")
+    def __init__(self, qdrant_client=None):
+        # THE FIX: If a client is provided, share it! Otherwise, make a new one.
+        if qdrant_client:
+            self.client = qdrant_client
+        else:
+            self.client = QdrantClient(path="local_qdrant_storage")
+            
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         
         # Load the local embedding model and the re-ranker
         self.model = SentenceTransformer(settings.EMBEDDING_MODEL)
         self.reranker = ReRanker()
 
-    search_top_k: int = 10  # Retrieve more candidates initially for the re-ranker to filter
+    search_top_k: int = 10 # Retrieve more candidates initially for the re-ranker to filter
 
     def search(self, query_text: str, tenant_id: str, user_role: str, top_k: int = 3) -> List[Dict[str, Any]]:
         """

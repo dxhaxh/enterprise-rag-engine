@@ -17,3 +17,15 @@ class DocumentChunk(BaseModel):
     content: str
     metadata: DocumentMetadata
     embedding: Optional[List[float]] = None
+
+class QueryRequest(BaseModel):
+    """What the user sends us when asking a question"""
+    query: str
+    tenant_id: str
+    user_role: str
+    top_k: int = 2
+
+class QueryResponse(BaseModel):
+    """What we send back to the user"""
+    answer: str
+    sources: List[str]
