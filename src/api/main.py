@@ -5,6 +5,7 @@ from src.ingestion.pipeline import IngestionPipeline
 from src.retrieval.vector_store import QdrantStore
 from src.retrieval.hybrid_search import EnterpriseSearchEngine
 from src.generation.generator import RAGGenerator
+from src.security.guardrails import SecurityGuardrails
 
 # 1. Define our global AI and Database variables
 ingestion_pipeline = None
@@ -45,6 +46,12 @@ async def ingest_document(doc: RawDocument):
 @app.post("/ask", response_model=QueryResponse)
 async def ask_question(req: QueryRequest):
     """Receives a question, securely searches, and generates an AI answer."""
+
+    # --- SECURITY FIREWALL: INPUT (You were missing this part!) ---
+    if not SecurityGuardrails.validate_input(req.query):
+        print("🚨 FIREWALL TRIGGERED: Input blocked!")
+        raise HTTPException(status_code=400, detail="Security Violation: Malicious prompt injection detected.")
+
     try:
         chunks = search_engine.search(
             query_text=req.query,
@@ -53,7 +60,14 @@ async def ask_question(req: QueryRequest):
             top_k=req.top_k
         )
         answer = generator.generate_answer(query=req.query, chunks=chunks)
+
+        # --- SECURITY FIREWALL: OUTPUT ---
+        if not SecurityGuardrails.validate_output(answer):
+            raise HTTPException(status_code=500, detail="Data Loss Prevention: Sensitive data blocked from output.")
+
         unique_sources = list(set([c["source"] for c in chunks]))
         return QueryResponse(answer=answer, sources=unique_sources)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
