@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: rag_qdrant
     ports:
-      - "6333:6333" 
+      - "6333:6333"
+      - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
 
@@ -13,10 +12,36 @@ services:
     image: redis/redis-stack:latest
     container_name: rag_redis
     ports:
-      - "6379:6379" 
-      - "8001:8001" 
+      - "6379:6379"
+      - "8001:8001"
     volumes:
       - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: rag_api
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - qdrant
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: rag_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000/ask
+    depends_on:
+      - api
 
 volumes:
   qdrant_data:

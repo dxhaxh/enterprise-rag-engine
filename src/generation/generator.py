@@ -1,3 +1,4 @@
+import os
 from openai import OpenAI
 from typing import List, Dict, Any
 
@@ -7,9 +8,10 @@ class RAGGenerator:
     to synthesize a secure, context-aware answer.
     """
     def __init__(self):
+        base_url = os.getenv("OLLAMA_URL", "http://localhost:11434").rstrip('/')
         # Point the OpenAI client to our local Ollama server
         self.client = OpenAI(
-            base_url="http://localhost:11434/v1",
+            base_url=f'{base_url}/v1',
             api_key="ollama"  # Ollama doesn't require a real API key, but the client expects a string
         )
         self.model_name = "llama3"

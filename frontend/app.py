@@ -1,5 +1,8 @@
+import os
 import streamlit as st
 import requests
+
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/ask")
 
 # 1. Page Configuration
 st.set_page_config(page_title="Enterprise RAG", page_icon="🛡️", layout="centered")
@@ -42,7 +45,7 @@ if prompt := st.chat_input("Ask the secure RAG engine a question..."):
                 }
                 
                 # Make the POST request to our local FastAPI server
-                response = requests.post("http://127.0.0.1:8000/ask", json=payload)
+                response = requests.post(API_URL, json=payload)
                 
                 if response.status_code == 200:
                     data = response.json()
